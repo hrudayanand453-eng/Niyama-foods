@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Niyama Foods – Billing</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #1a6b3c;
+    --gold: #c9922a;
+    --gold-light: #fdf6e8;
+    --bg: #f7f4ef;
+    --white: #ffffff;
+    --text: #1a1a1a;
+    --muted: #888;
+    --red: #c0392b;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  header {
+    background: var(--green); color: white;
+    padding: 16px 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 20px; }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+  .order-badge { font-size: 12px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; }
+  .log-btn { font-size: 12px; background: var(--gold); padding: 4px 10px; border-radius: 20px; border: none; color: white; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; }
+
+  .section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 16px 16px 8px; }
+
+  .menu-grid { display: flex; flex-direction: column; gap: 10px; padding: 0 16px; }
+  .menu-item {
+    background: var(--white); border-radius: var(--radius); padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: var(--shadow); border: 2px solid transparent; transition: border-color 0.2s;
+  }
+  .menu-item.has-qty { border-color: var(--green); }
+  .item-info { flex: 1; }
+  .item-name { font-weight: 600; font-size: 15px; }
+  .item-price { font-size: 13px; color: var(--gold); font-weight: 500; margin-top: 2px; }
+  .item-actions { display: flex; gap: 6px; margin-right: 10px; }
+  .edit-btn, .del-btn { border: none; border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .edit-btn { background: #eef6f2; color: var(--green); }
+  .del-btn  { background: #fdecea; color: var(--red); }
+  .qty-control { display: flex; align-items: center; gap: 10px; }
+  .qty-btn { width: 32px; height: 32px; border-radius: 50%; border: none; font-size: 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+  .qty-btn:active { transform: scale(0.88); }
+  .qty-btn.minus { background: #f0f0f0; color: #444; }
+  .qty-btn.plus  { background: var(--green); color: white; }
+  .qty-num { font-size: 17px; font-weight: 700; min-width: 20px; text-align: center; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 20px; padding: 24px; width: calc(100% - 40px); max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+  .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; color: var(--green); }
+  .modal input { width: 100%; border: 1.5px solid #ddd; border-radius: 10px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; margin-bottom: 10px; }
+  .modal input:focus { border-color: var(--green); }
+  .modal-btns { display: flex; gap: 10px; margin-top: 4px; }
+  .modal-btns button { flex: 1; border: none; border-radius: 10px; padding: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-cancel { background: #f0f0f0; color: #666; }
+  .btn-save   { background: var(--green); color: white; }
+
+  .add-item-box { margin: 14px 16px; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .add-item-toggle { width: 100%; background: none; border: none; padding: 14px 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--green); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .add-item-form { display: none; padding: 0 16px 16px; flex-direction: column; gap: 10px; }
+  .add-item-form.open { display: flex; }
+  .add-item-form input { border: 1.5px solid #ddd; border-radius: 10px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; }
+  .add-item-form input:focus { border-color: var(--green); }
+  .add-item-form button { background: var(--green); color: white; border: none; border-radius: 10px; padding: 11px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+  #order-summary { display: none; margin: 0 16px; background: var(--gold-light); border-radius: var(--radius); padding: 14px 16px; border: 1.5px solid #e8d5aa; }
+  #order-summary h3 { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+  .summary-line { display: flex; justify-content: space-between; font-size: 14px; padding: 3px 0; }
+  .summary-total { display: flex; justify-content: space-between; font-size: 17px; font-weight: 700; padding-top: 10px; margin-top: 8px; border-top: 1.5px solid #e8d5aa; color: var(--green); }
+
+  #print-btn { display: none; margin: 14px 16px 8px; width: calc(100% - 32px); background: var(--green); color: white; border: none; border-radius: var(--radius); padding: 17px; font-family: 'Playfair Display', serif; font-size: 18px; cursor: pointer; box-shadow: 0 6px 20px rgba(26,107,60,0.35); transition: transform 0.1s; }
+  #print-btn:active { transform: scale(0.98); }
+  #clear-btn { display: none; margin: 0 16px 24px; width: calc(100% - 32px); background: none; border: 1.5px solid #ddd; border-radius: var(--radius); padding: 11px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; }
+
+  /* ══ PRINT VIEW — fits 70mm × 50mm ══ */
+  #print-view {
+    background: white;
+    min-height: 100vh;
+    padding: 10px;
+  }
+
+  .ticket {
+    width: 208px; /* 55mm */
+    margin: 0 auto;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  /* Top line: name + token on same row to save height */
+  .ticket-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+  }
+  .ticket-brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 11px;
+    color: var(--green);
+    line-height: 1;
+  }
+  .ticket-brand small {
+    display: block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 7px;
+    color: #aaa;
+    font-weight: 400;
+    margin-top: 1px;
+  }
+  .ticket-token-block {
+    text-align: right;
+  }
+  .ticket-token-label {
+    font-size: 7px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #aaa;
+  }
+  .ticket-token-no {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--green);
+    line-height: 1;
+  }
+
+  .ticket-time {
+    font-size: 8px;
+    color: #bbb;
+    margin-bottom: 4px;
+  }
+
+  .ticket-items {
+    border-top: 1px dashed #ccc;
+    border-bottom: 1px dashed #ccc;
+    padding: 3px 0;
+    margin-bottom: 4px;
+  }
+  .ticket-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 1px 0;
+  }
+  .ticket-item-name { flex: 1; }
+  .ticket-item-qty  { color: #888; margin: 0 6px; font-size: 10px; }
+  .ticket-item-price { font-weight: 600; }
+
+  .ticket-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 3px;
+  }
+
+  .ticket-footer {
+    font-size: 8px;
+    color: #ccc;
+    text-align: center;
+    border-top: 1px dashed #eee;
+    padding-top: 3px;
+  }
+
+  .back-btn { display: block; margin: 16px auto 0; background: var(--green); color: white; border: none; border-radius: 12px; padding: 13px 32px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; }
+
+  /* SALES LOG */
+  #log-view { padding-bottom: 30px; }
+  .log-header { background: var(--green); color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; }
+  .log-header h2 { font-family: 'Playfair Display', serif; font-size: 18px; }
+  .log-back { background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 20px; padding: 5px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; }
+  .log-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 16px; }
+  .stat-card { background: white; border-radius: 14px; padding: 14px 10px; text-align: center; box-shadow: var(--shadow); }
+  .stat-val { font-size: 22px; font-weight: 700; color: var(--green); }
+  .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .log-orders { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  .log-card { background: white; border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+  .log-card-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .log-card-no { font-weight: 700; color: var(--green); font-size: 15px; }
+  .log-card-time { font-size: 12px; color: var(--muted); }
+  .log-card-item { display: flex; justify-content: space-between; font-size: 13px; color: #555; padding: 2px 0; }
+  .log-card-total { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; border-top: 1px solid #eee; margin-top: 8px; padding-top: 8px; color: var(--green); }
+  .no-orders { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+  .clear-log-btn { display: block; margin: 20px auto 0; background: #fdecea; color: var(--red); border: none; border-radius: 12px; padding: 11px 24px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+  @media print {
+    #billing-view, #log-view, .back-btn { display: none !important; }
+    #print-view { padding: 0; }
+    .ticket { margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <h3>Edit Item</h3>
+    <input type="text" id="edit-name" placeholder="Item name">
+    <input type="number" id="edit-price" placeholder="Price in ₹" inputmode="numeric">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <h3 id="confirm-title">Are you sure?</h3>
+    <p id="confirm-msg" style="font-size:14px;color:#555;margin-bottom:20px;"></p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeConfirm(false)">Cancel</button>
+      <button class="btn-save" style="background:var(--red)" onclick="closeConfirm(true)">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- BILLING -->
+<div id="billing-view" class="view active">
+  <header>
+    <h1>Niyama Foods</h1>
+    <div class="header-right">
+      <span class="order-badge">#<span id="current-order-no">1</span></span>
+      <button class="log-btn" onclick="showLog()">📊 Sales</button>
+    </div>
+  </header>
+  <div class="section-title">Menu</div>
+  <div class="menu-grid" id="menu-grid"></div>
+  <div class="add-item-box">
+    <button class="add-item-toggle" onclick="toggleAddForm()">＋ Add New Item</button>
+    <div class="add-item-form" id="add-item-form">
+      <input type="text" id="new-item-name" placeholder="Item name (e.g. Mango Lassi)">
+      <input type="number" id="new-item-price" placeholder="Price in ₹" inputmode="numeric">
+      <button onclick="addNewItem()">Add to Menu</button>
+    </div>
+  </div>
+  <div class="section-title" id="summary-label" style="display:none">Order Summary</div>
+  <div id="order-summary">
+    <h3>Items Ordered</h3>
+    <div id="summary-lines"></div>
+    <div class="summary-total"><span>Total</span><span id="summary-total-amt"></span></div>
+  </div>
+  <button id="clear-btn" onclick="clearOrder()">✕ Clear Order</button>
+  <button id="print-btn" onclick="goToPrint()">🎫 Generate Ticket</button>
+</div>
+
+<!-- PRINT -->
+<div id="print-view" class="view">
+  <div class="ticket">
+    <div class="ticket-top">
+      <div class="ticket-brand">
+        Niyama Foods
+        <small>Nexus Mall Mysuru</small>
+      </div>
+      <div class="ticket-token-block">
+        <div class="ticket-token-label">Token</div>
+        <div class="ticket-token-no" id="ticket-order-no"></div>
+      </div>
+    </div>
+    <div class="ticket-time" id="ticket-time"></div>
+    <div class="ticket-items" id="ticket-items"></div>
+    <div class="ticket-total"><span>TOTAL</span><span id="ticket-total"></span></div>
+    <div class="ticket-footer">Show at serving counter · Thank you 🌿</div>
+  </div>
+  <button class="back-btn" onclick="goBack()">← New Order</button>
+</div>
+
+<!-- SALES LOG -->
+<div id="log-view" class="view">
+  <div class="log-header">
+    <h2>Sales Log</h2>
+    <button class="log-back" onclick="showBilling()">← Back</button>
+  </div>
+  <div class="log-stats">
+    <div class="stat-card"><div class="stat-val" id="stat-orders">0</div><div class="stat-lbl">Orders</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-revenue">₹0</div><div class="stat-lbl">Revenue</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-items">0</div><div class="stat-lbl">Items Sold</div></div>
+  </div>
+  <div class="log-orders" id="log-orders"></div>
+  <button class="clear-log-btn" onclick="clearLog()">🗑 Clear All Sales Data</button>
+</div>
+
+<script>
+  let menu = JSON.parse(localStorage.getItem('nf_menu') || 'null') || [{ name: 'Mango Sticky Rice', price: 200 }];
+  let orderNo = parseInt(localStorage.getItem('nf_order_no') || '1');
+  let salesLog = JSON.parse(localStorage.getItem('nf_sales') || '[]');
+  let quantities = {};
+  let editingIndex = null;
+
+  function saveState() {
+    localStorage.setItem('nf_menu', JSON.stringify(menu));
+    localStorage.setItem('nf_order_no', String(orderNo));
+    localStorage.setItem('nf_sales', JSON.stringify(salesLog));
+  }
+
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+  function showBilling() { showView('billing-view'); }
+  function showLog() { renderLog(); showView('log-view'); }
+
+  function renderMenu() {
+    document.getElementById('current-order-no').textContent = orderNo;
+    const grid = document.getElementById('menu-grid');
+    grid.innerHTML = '';
+    menu.forEach((item, i) => {
+      const qty = quantities[i] || 0;
+      const div = document.createElement('div');
+      div.className = 'menu-item' + (qty > 0 ? ' has-qty' : '');
+      div.innerHTML = `
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-price">₹${item.price}</div>
+        </div>
+        <div class="item-actions">
+          <button class="edit-btn" onclick="openEdit(${i})">✏️</button>
+          <button class="del-btn" onclick="deleteItem(${i})">🗑</button>
+        </div>
+        <div class="qty-control">
+          <button class="qty-btn minus" onclick="changeQty(${i}, -1)">−</button>
+          <span class="qty-num">${qty}</span>
+          <button class="qty-btn plus" onclick="changeQty(${i}, 1)">＋</button>
+        </div>`;
+      grid.appendChild(div);
+    });
+    updateSummary();
+  }
+
+  function changeQty(index, delta) {
+    quantities[index] = Math.max(0, (quantities[index] || 0) + delta);
+    renderMenu();
+  }
+
+  function updateSummary() {
+    let lines = '', total = 0, hasItems = false;
+    menu.forEach((item, i) => {
+      const qty = quantities[i] || 0;
+      if (qty > 0) {
+        hasItems = true;
+        const sub = item.price * qty;
+        total += sub;
+        lines += `<div class="summary-line"><span>${item.name} × ${qty}</span><span>₹${sub}</span></div>`;
+      }
+    });
+    document.getElementById('order-summary').style.display = hasItems ? 'block' : 'none';
+    document.getElementById('summary-label').style.display = hasItems ? 'block' : 'none';
+    document.getElementById('print-btn').style.display = hasItems ? 'block' : 'none';
+    document.getElementById('clear-btn').style.display = hasItems ? 'block' : 'none';
+    document.getElementById('summary-lines').innerHTML = lines;
+    document.getElementById('summary-total-amt').textContent = '₹' + total;
+  }
+
+  function clearOrder() { quantities = {}; renderMenu(); }
+
+  function toggleAddForm() { document.getElementById('add-item-form').classList.toggle('open'); }
+
+  function addNewItem() {
+    const name = document.getElementById('new-item-name').value.trim();
+    const price = parseInt(document.getElementById('new-item-price').value);
+    if (!name || isNaN(price) || price <= 0) { alert('Enter valid name and price.'); return; }
+    menu.push({ name, price });
+    document.getElementById('new-item-name').value = '';
+    document.getElementById('new-item-price').value = '';
+    document.getElementById('add-item-form').classList.remove('open');
+    saveState(); renderMenu();
+  }
+
+  function openEdit(i) {
+    editingIndex = i;
+    document.getElementById('edit-name').value = menu[i].name;
+    document.getElementById('edit-price').value = menu[i].price;
+    document.getElementById('edit-modal').classList.add('open');
+  }
+  function closeModal() { editingIndex = null; document.getElementById('edit-modal').classList.remove('open'); }
+  function saveEdit() {
+    const name = document.getElementById('edit-name').value.trim();
+    const price = parseInt(document.getElementById('edit-price').value);
+    if (!name || isNaN(price) || price <= 0) { alert('Enter valid name and price.'); return; }
+    menu[editingIndex] = { name, price };
+    closeModal(); saveState(); renderMenu();
+  }
+
+  let confirmCallback = null;
+  function showConfirm(title, msg, btnLabel, cb) {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent = msg;
+    document.querySelector('#confirm-modal .btn-save').textContent = btnLabel;
+    confirmCallback = cb;
+    document.getElementById('confirm-modal').classList.add('open');
+  }
+  function closeConfirm(yes) {
+    document.getElementById('confirm-modal').classList.remove('open');
+    if (yes && confirmCallback) confirmCallback();
+    confirmCallback = null;
+  }
+
+  function deleteItem(i) {
+    showConfirm('Remove Item', 'Remove "' + menu[i].name + '" from menu?', 'Yes, Remove', () => {
+      menu.splice(i, 1);
+      const newQty = {};
+      Object.keys(quantities).forEach(k => {
+        const ki = parseInt(k);
+        if (ki < i) newQty[ki] = quantities[ki];
+        else if (ki > i) newQty[ki - 1] = quantities[ki];
+      });
+      quantities = newQty;
+      saveState(); renderMenu();
+    });
+  }
+
+  function goToPrint() {
+    let itemsHtml = '', total = 0;
+    const orderedItems = [];
+    menu.forEach((item, i) => {
+      const qty = quantities[i] || 0;
+      if (qty > 0) {
+        const sub = item.price * qty;
+        total += sub;
+        orderedItems.push({ name: item.name, qty, price: item.price, sub });
+        itemsHtml += `<div class="ticket-item">
+          <span class="ticket-item-name">${item.name}</span>
+          <span class="ticket-item-qty">×${qty}</span>
+          <span class="ticket-item-price">₹${sub}</span>
+        </div>`;
+      }
+    });
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    document.getElementById('ticket-order-no').textContent = String(orderNo).padStart(3, '0');
+    document.getElementById('ticket-time').textContent = dateStr + ' · ' + timeStr;
+    document.getElementById('ticket-items').innerHTML = itemsHtml;
+    document.getElementById('ticket-total').textContent = '₹' + total;
+    salesLog.push({ no: orderNo, time: now.toISOString(), items: orderedItems, total });
+    orderNo++;
+    saveState();
+    showView('print-view');
+  }
+
+  function goBack() { quantities = {}; showView('billing-view'); renderMenu(); }
+
+  function renderLog() {
+    let totalRevenue = 0, totalOrders = salesLog.length, totalItems = 0;
+    salesLog.forEach(o => { totalRevenue += o.total; o.items.forEach(it => totalItems += it.qty); });
+    document.getElementById('stat-orders').textContent = totalOrders;
+    document.getElementById('stat-revenue').textContent = '₹' + totalRevenue;
+    document.getElementById('stat-items').textContent = totalItems;
+    const container = document.getElementById('log-orders');
+    if (!salesLog.length) { container.innerHTML = '<div class="no-orders">No orders yet 🌿</div>'; return; }
+    container.innerHTML = [...salesLog].reverse().map(order => {
+      const t = new Date(order.time);
+      const timeStr = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const itemLines = order.items.map(it => `<div class="log-card-item"><span>${it.name} × ${it.qty}</span><span>₹${it.sub}</span></div>`).join('');
+      return `<div class="log-card">
+        <div class="log-card-header"><span class="log-card-no">#${String(order.no).padStart(3,'0')}</span><span class="log-card-time">${timeStr}</span></div>
+        ${itemLines}
+        <div class="log-card-total"><span>Total</span><span>₹${order.total}</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  function clearLog() {
+    showConfirm('Clear Sales Data', 'This will delete all orders and reset the token number. Cannot be undone.', 'Yes, Clear All', () => {
+      salesLog = []; orderNo = 1;
+      saveState(); renderLog(); renderMenu();
+    });
+  }
+
+  renderMenu();
+</script>
+</body>
+</html>
